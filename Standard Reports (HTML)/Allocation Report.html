@@ -1,0 +1,308 @@
+<style type="text/css" media="screen">
+
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+td, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+.result_table tr:nth-child(even) {
+    background-color: #dddddd;
+}
+
+#headline{
+    text-align: center;
+}
+
+#period_input_box{
+    text-align: center;
+}
+
+.result_table{
+    margin-bottom:40px;
+}
+
+.orgunit_metadata_table{
+    margin-bottom:15px;
+}
+
+</style>
+
+<h1 id="headline"> Allocation List -- All facility types </h1>
+
+<div id="period_input_box">
+    <h5>Select month (includes previous): </h5>
+    <select id="periods_inputs">
+
+    </select>
+
+</div>
+
+<div id="result_tables">
+
+</div>
+
+<script type="text/javascript">
+
+var ROOT_ORGUNIT = 'YeIr6eeOdMh'
+var PROGRAM_ID = 'KNZZ0pAr75Y'
+
+$('#periods_inputs').change(function(){
+    var chosen_relative_period = $('#periods_inputs option:selected').val() + ';' + $('#periods_inputs option:selected').prev().val()
+    updateReport(chosen_relative_period)
+})
+
+analytics_json = {};
+program_id = '';
+program_name = '';
+orgunit_obj = []
+
+function updateReport(reporting_period){
+    var orgUnit = ROOT_ORGUNIT
+    $('#result_tables').html('');
+
+    orgunit_obj.children.forEach(function (child, i) {
+        resolveProgramId('ARV') // Change this to the program name for the report
+        .then(function(){
+            return resolveResponseFromAnalytics(child.id, reporting_period)
+        })
+        .then(function(){
+            if (analytics_json.rows.length > 0){
+                generateReportTable(i, child.name, child.id, reporting_period)
+            } else {
+                showNoDataPresentMessage()
+            }
+        })
+    });
+}
+
+function showNoDataPresentMessage(){
+    $('#result_tables').html('<center><h1> No data present, please choose another month above</h1></center>')
+}
+
+function getMonthToDisplay(date_number){
+    var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    if (date_number.startsWith('0')){
+        return months[parseInt(date_number.substring(5,6))-1]
+    } else {
+        return months[parseInt(date_number.substring(4,6))-1]
+    }
+}
+
+function setValueToPeriodsInput(reporting_periods){
+    for(var i = 0; i < reporting_periods.length; i++){
+        $('#periods_inputs').append('<option value="' + reporting_periods[i] + '">' + reporting_periods[i].substring(0,4) + ' - ' + getMonthToDisplay(reporting_periods[i]) + '</option')
+    }
+}
+
+$( document ).ready( function() {
+    var orgUnit = dhis2.report.organisationUnit;
+    console.log("dhis2.report", dhis2.report)
+    setValueToPeriodsInput(dhis2.report.periods)
+    initaliseOrgunitObject(ROOT_ORGUNIT)
+
+    // Set default as april
+    var initial_reporting_period = dhis2.report.periods[3] + ';' + dhis2.report.periods[2]
+    $("#periods_inputs").val(dhis2.report.periods[3]);
+
+    updateReport(initial_reporting_period);
+});
+
+function initaliseOrgunitObject(orgunit_id){
+    getRelevantData('organisationUnits/' + orgunit_id, '', 'name,children,user', function(data){
+        orgunit_obj = data
+        for(var i = 0; i < orgunit_obj.children.length; i++){
+            child_id = orgunit_obj.children[i].id
+            getRelevantData('organisationUnits/' + child_id, '', 'name', function(data){
+                orgunit_obj.children[i].name = data.name
+            })
+        }
+    })
+}
+
+function getRelevantData(kind_of_data, filter, fields, callback){
+    return $.ajax({
+        url: '../api/' + kind_of_data + '.jsonp?' + filter + 'paging=false&fields=' + fields,
+        type: 'GET',
+        async: false,
+        dataType: 'jsonp',
+        contentType:'application/jsonp',
+        authorization: "Bearer 7fa34aca-a5ba-485b-b108-b18faad54c6d",
+        error: function (data) {
+            console.log("Error on retrieving data via API call")
+        },
+        success: function (data) {
+            callback(data)
+        }
+    });
+}
+
+data_element_codes = []
+function getAllDataElementIDs(){
+    data_element_ids = []
+    getRelevantData('dataElements', 'filter=shortName:^ilike:' + program_name + '&filter=name:like:Quantity Required&', 'id,code', function(data){
+        for(var i = 0; i < data.dataElements.length; i++){
+            data_element_ids.push(data.dataElements[i].id)
+            data_element_codes.push(data.dataElements[i].code)
+        }
+    })
+    return data_element_ids
+}
+
+function resolveResponseFromAnalytics(orgunit_id, period){
+    var data_element_ids = getAllDataElementIDs()
+    var data_elements_string = 'dimension=dx:'
+    for(var i = 0; i < data_element_ids.length; i++){
+        data_elements_string += program_id + '.' + data_element_ids[i] + ';'
+    }
+    data_elements_string = data_elements_string.substring(0, data_elements_string.length - 1) // remove last ';' from built string
+    return $.get( '../api/25/analytics.json?' + data_elements_string + '&dimension=pe:' + period + '&filter=ou:' + orgunit_id + '&displayProperty=NAME&user=M5zQapPyTZI&skipMeta=false', function( json ) {
+        analytics_json = json;
+    });
+}
+function resolveProgramId(name){
+    return $.get( "../api/programs.json?filter=displayName:eq:" + name, function( json ) {
+        program_id = json.programs[0].id;
+        program_name = json.programs[0].displayName;
+    })
+}
+function generateReportTable(facility_NO, orgunit_name, orgunit_id, reporting_period){
+    dataelement_dict = createDataelementObjects();
+    commodity_operations = getCommodityOperationNames(dataelement_dict)
+    createHTMLTable(facility_NO, commodity_operations, dataelement_dict, orgunit_name, orgunit_id, reporting_period)
+}
+
+function createHTMLTable(facility_NO, commodity_operations, dataelement_dict, orgunit_name, orgunit_id, reporting_period){
+
+    getRelevantData('events', 'program=' + PROGRAM_ID + '&orgUnit=' + orgunit_id + '&', 'status,eventDate,completedBy', function(data){
+        for(var i = 0; i < data.events.length; i++){
+            if (data.events[i].eventDate.substring(5,7) == reporting_period.substring(4,6)){
+                orgunit_obj.children[facility_NO].completedBy = data.events[i].completedBy
+                orgunit_obj.children[facility_NO].eventDate = data.events[i].eventDate
+                orgunit_obj.children[facility_NO].status = data.events[i].status
+                break
+            }
+        }
+    })
+
+    createResultTable(facility_NO, orgunit_name)
+    createHeaders(facility_NO, commodity_operations)
+    createElements(facility_NO, commodity_operations, dataelement_dict)
+}
+
+function alterDate(original_date){
+    new_date = original_date.substring(0,10)
+    return new_date
+}
+
+function createResultTable(facility_NO, orgunit_name){
+    $('#result_tables').append('<h1> District: ' + orgunit_obj.name + '</h1>')
+    $('#result_tables').append('<table class="orgunit_metadata_table"><tr><td>Facility: ' + orgunit_name + '</td><td>Completed by: ' + orgunit_obj.children[facility_NO].completedBy + '</td></tr><tr><td>Order date: ' + alterDate(orgunit_obj.children[facility_NO].eventDate) + '</td><td>Order status: ' + orgunit_obj.children[facility_NO].status + '</td></tr></table>')
+    $('#result_tables').append('<table class="result_table" id="' + facility_NO + '"><tr id="result_table_headings"></tr></table>')
+}
+
+function createElements(div_id, commodity_operations, dataelement_dict){
+    var drug_code_counter = 0;
+    for(key in dataelement_dict){
+        table_elements = '<td>' + data_element_codes[drug_code_counter] + '</td>';
+        table_elements += '<td>' + key + '</td>'
+        for(var i = 0; i < commodity_operations.length; i++){
+            table_elements += '<td>' + dataelement_dict[key][commodity_operations[i]] + '</td>';
+            drug_code_counter++;
+        }
+        $('#' + div_id).append('<tr>' + table_elements + '</tr>');
+    }
+}
+
+function createHeaders(div_id, commodity_operations){
+    $('#' + div_id + ' #result_table_headings').append('<th>Drug code</th><th>Regimen</th><th>Packs ordered</th>');
+}
+
+function createDataelementObjects(){
+    dataelement_object = addDataelementValues();
+    dataelement_object = addDataelementNames(dataelement_object);
+    dataelement_object = addDataelementCommodityOperation(dataelement_object);
+    dataelement_object = createSummaryDictForEachCommodity(dataelement_object);
+    return dataelement_object;
+}
+
+function createSummaryDictForEachCommodity(dict_on_each_dataelement){
+    summary_dict = {};
+
+    // initialise dict with empty objects
+    for(var key in dict_on_each_dataelement){
+        element_commodity_name = dict_on_each_dataelement[key].actual_commodity_name
+        summary_dict[element_commodity_name] = {};
+    }
+    for(var key in dict_on_each_dataelement){
+        element_commodity_name = dict_on_each_dataelement[key].actual_commodity_name
+        commodity_operation_name = dict_on_each_dataelement[key].commodity_operation
+        element_value = parseInt(dict_on_each_dataelement[key].value)
+        summary_dict[element_commodity_name][commodity_operation_name] = element_value
+    }
+    return summary_dict;
+}
+
+// Will eventually be the headers for the HTML Form
+function getCommodityOperationNames(dataelement_dict){
+    for(var key in dataelement_dict){
+        return Object.keys(dataelement_dict[key]);
+    }
+}
+
+function addDataelementValues(){
+    dict = {};
+    for (var i = 0; i < analytics_json.rows.length; i++){
+        program_id_and_dataelement_id_combined = analytics_json.rows[i][0];
+        data_value = analytics_json.rows[i][2];
+        dict[program_id_and_dataelement_id_combined] = {value:data_value};
+    }
+    return dict;
+}
+
+function addDataelementNames(dict_for_update){
+    names_from_metadata = analytics_json.metaData.names;
+    for (var key in dict_for_update){
+        dict_for_update[key].full_name = names_from_metadata[key];
+        dict_for_update[key].actual_commodity_name = getCorrectName(dict_for_update[key].full_name);
+    }
+    return dict_for_update
+}
+
+function addDataelementCommodityOperation(dict_for_update){
+    for (var key in dict_for_update){
+        dict_for_update[key].commodity_operation = getCommodityOperationPostfix(dict_for_update[key].full_name)
+    }
+    return dict_for_update
+}
+
+function getCorrectName(name){
+    only_commodity_name = removeCommodityOperationPostfix(name)
+    only_commodity_name = removeProgramName(only_commodity_name)
+    return only_commodity_name;
+}
+
+function removeProgramName(name){
+    var NUMBER_OF_SPACES = 1;
+    return name.substring((program_name.length + NUMBER_OF_SPACES))
+}
+
+function getFullName(short_name){
+    return data_element_short_name_and_name[short_name];
+}
+
+function getCommodityOperationPostfix(name){
+    return name.split('__')[1]
+}
+
+function removeCommodityOperationPostfix(name){
+    return name.split('__')[0]
+}
+
+</script>
