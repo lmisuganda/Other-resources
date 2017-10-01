@@ -87,7 +87,6 @@ $('#periods_inputs').change(function(){
 })
 
 $('#lower-month-input').keyup(function(){
-    console.log("change")
     var low = $('#lower-month-input').val()
     var high = $('#higher-month-input').val()
     showLowAndHighMonthsOfStock(low,high)
@@ -151,14 +150,13 @@ function setValueToPeriodsInput(reporting_periods){
 $( document ).ready( function() {
     var orgUnit = dhis2.report.organisationUnit;
     ROOT_ORGUNIT = dhis2.report.organisationUnit.id
-    console.log("dhis2.report", dhis2.report)
 
     setValueToPeriodsInput(dhis2.report.periods)
     initaliseOrgunitObject(ROOT_ORGUNIT)
 
-    // Set default as april
-    var initial_reporting_period = dhis2.report.periods[3] + ';' + dhis2.report.periods[2]
-    $("#periods_inputs").val(dhis2.report.periods[3]);
+    // Set default as november
+    var initial_reporting_period = dhis2.report.periods[10] + ';' + dhis2.report.periods[9]
+    $("#periods_inputs").val(dhis2.report.periods[10]);
 
     $('#headline').append(dhis2.report.organisationUnit.name)
     $('#result').html('<center><h1>Please wait...</h1></center>');

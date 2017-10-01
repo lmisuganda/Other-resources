@@ -85,7 +85,6 @@ var children = []
 
 function updateReport(aggregation_type, reporting_period){
     var orgUnit = dhis2.report.organisationUnit;
-    console.log("Orgunit.id: ", orgUnit.id)
     $('#result_table').html('<center><h1 style="color:lightcoral">Please wait...</h1></center>');
     resolveProgramId('ARV') // Change this to the program name for the report
     .then(function(){
@@ -140,16 +139,15 @@ function setValueToAggregationsInput(){
 
 $( document ).ready( function() {
     var orgUnit = dhis2.report.organisationUnit;
-    console.log("dhis2.report", dhis2.report)
 
     setValueToPeriodsInput(dhis2.report.periods)
     setValueToAggregationsInput()
     shouldOrgunitAggregate(dhis2.report.organisationUnit.id)
     $('#headline').append(orgUnit.name);
 
-    // init to april
-    var initial_reporting_period = dhis2.report.periods[3] + ';' + dhis2.report.periods[2]
-    $("#periods_inputs").val(dhis2.report.periods[3]);
+    // Set default as november
+    var initial_reporting_period = dhis2.report.periods[10] + ';' + dhis2.report.periods[9]
+    $("#periods_inputs").val(dhis2.report.periods[10]);
 
     updateReport('SUM', initial_reporting_period);
 });
@@ -173,7 +171,7 @@ function getRelevantData(kind_of_data, filter, fields, callback){
 
 function getAllDataElementIDs(){
     data_element_ids = []
-    getRelevantData('dataElements', 'filter=shortName:^ilike:' + program_name + '&', 'id', function(data){
+    getRelevantData('dataElements', 'filter=shortName:^ilike:' + program_name + '&filter=valueType:!eq:BOOLEAN&', 'id', function(data){
         for(var i = 0; i < data.dataElements.length; i++){
             data_element_ids.push(data.dataElements[i].id)
         }

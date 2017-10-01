@@ -156,7 +156,7 @@ function includeOnlyRelevantCommodityGroups(data_element_groups){
     return commodity_groups_IDs_to_include;
 }
 
-DELAY_FOR_AWAITING_NEW_DATABASE_ENTRIES = 3000;
+var DELAY_FOR_AWAITING_NEW_DATABASE_ENTRIES = 3000;
 
 getRelevantData('dataElements', 'filter=shortName:like:ARV_&', 'name,formName,id', createDataElementGroupsForEveryCommodity).then(function(){
     for(var i = 0; i < all_commodity_operations.length; i++){

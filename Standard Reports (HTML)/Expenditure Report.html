@@ -56,8 +56,8 @@ analytics_json = {};
 program_id = '';
 program_name = '';
 var CURRENCY = 'USD'
-var ROOT_ORGUNIT = 'YeIr6eeOdMh'
-var PROGRAM_ID = 'KNZZ0pAr75Y'
+var ROOT_ORGUNIT = 'QFo7zrp2dsY'
+var PROGRAM_ID = 'Y3mw3alAgKH'
 
 function updateReport(aggregation_type, reporting_period, orgunit_id){
     $('#result_table').html('<center><h1 style="color:lightcoral">Please wait...</h1></center>');
@@ -99,7 +99,6 @@ function showNoDataPresentMessage(){
 }
 
 $( document ).ready( function() {
-    console.log("dhis2.report", dhis2.report)
     $('#headline').append(dhis2.report.organisationUnit.name);
     updateReport('SUM', '2017', dhis2.report.organisationUnit.id);
 });
@@ -123,7 +122,7 @@ function getRelevantData(kind_of_data, filter, fields, callback){
 
 function getAllDataElementIDs(){
     data_element_ids = []
-    getRelevantData('dataElements', 'filter=shortName:^ilike:' + program_name + '&', 'id', function(data){
+    getRelevantData('dataElements', 'filter=shortName:^ilike:' + program_name + '&filter=valueType:!eq:BOOLEAN&', 'id', function(data){
         for(var i = 0; i < data.dataElements.length; i++){
             data_element_ids.push(data.dataElements[i].id)
         }

@@ -50,8 +50,8 @@ td, th {
 
 <script type="text/javascript">
 
-var ROOT_ORGUNIT = 'YeIr6eeOdMh'
-var PROGRAM_ID = 'KNZZ0pAr75Y'
+var ROOT_ORGUNIT = 'QFo7zrp2dsY'
+var PROGRAM_ID = 'Y3mw3alAgKH'
 
 $('#periods_inputs').change(function(){
     var chosen_relative_period = $('#periods_inputs option:selected').val() + ';' + $('#periods_inputs option:selected').prev().val()
@@ -76,7 +76,7 @@ function updateReport(reporting_period){
             if (analytics_json.rows.length > 0){
                 generateReportTable(i, child.name, child.id, reporting_period)
             } else {
-                showNoDataPresentMessage()
+                // showNoDataPresentMessage()
             }
         })
     });
@@ -103,13 +103,12 @@ function setValueToPeriodsInput(reporting_periods){
 
 $( document ).ready( function() {
     var orgUnit = dhis2.report.organisationUnit;
-    console.log("dhis2.report", dhis2.report)
     setValueToPeriodsInput(dhis2.report.periods)
     initaliseOrgunitObject(ROOT_ORGUNIT)
 
-    // Set default as april
-    var initial_reporting_period = dhis2.report.periods[3] + ';' + dhis2.report.periods[2]
-    $("#periods_inputs").val(dhis2.report.periods[3]);
+    // Set default as november
+    var initial_reporting_period = dhis2.report.periods[10] + ';' + dhis2.report.periods[9]
+    $("#periods_inputs").val(dhis2.report.periods[10]);
 
     updateReport(initial_reporting_period);
 });
@@ -135,7 +134,7 @@ function getRelevantData(kind_of_data, filter, fields, callback){
         contentType:'application/jsonp',
         authorization: "Bearer 7fa34aca-a5ba-485b-b108-b18faad54c6d",
         error: function (data) {
-            console.log("Error on retrieving data via API call")
+            console.log("Error on retrieving data via API call", data)
         },
         success: function (data) {
             callback(data)
