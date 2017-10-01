@@ -1,1 +1,1 @@
-# CSV for importing every commodity in DHIS2
+# CSV for importing commodities in DHIS2
